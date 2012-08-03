@@ -1,0 +1,10 @@
+#ifndef GUARD_IRCMM_COMPILER_FIX_HH_INCLUDED
+#define GUARD_IRCMM_COMPILER_FIX_HH_INCLUDED
+
+namespace std {
+	class type_info;
+}
+
+
+#endif //GUARD_IRCMM_COMPILER_FIX_HH_INCLUDED
+
