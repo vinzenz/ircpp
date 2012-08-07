@@ -1,4 +1,5 @@
 #include "handlers.hh"
+#include "parser.hh"
 
 namespace ircpp {
 namespace detail {
@@ -25,16 +26,27 @@ void send_line(
 
 void parse_line( instance_data instance, std::string const & line )
 {
-    instance.log() << "MESSAGE RECEIVED: " << line << std::endl;                
-    std::size_t index = line.find_first_of(' ');
-    if( index != std::string::npos ) {
-        std::string command = line.substr( 0, index );
-        if( command == "PING" && line.size() >= 6) {
-            command = line;
-            command[1] = 'O';
-            command.erase(5,1);
-            send_line( instance, command );
+    instance.log() << "MESSAGE RECEIVED: " << line << std::endl;
+    message_data data;
+    if( parse_message( line, data ) ) {
+        if( data.command == "PING" ) {
+            std::string reply = "PONG";
+            if( !data.arguments.empty() ) {
+                reply += data.arguments.back();
+            }
+            send_line( instance, reply );
         }
+        instance.log() << "PARSER OUTPUT:" << std::endl;
+        instance.log() << "SENDER    : " << data.sender << std::endl;
+        instance.log() << "COMMAND   : " << data.command << std::endl;
+        instance.log() << "ARGUMENTS : " << std::endl;
+        for( std::string const & s : data.arguments ) {
+            instance.log() << "\t-> " << s << std::endl;
+        }
+        
+    }
+    else {
+        instance.log() << "PARSER ERROR ON MESSAGE: " << line << std::endl;
     }
 }
 
