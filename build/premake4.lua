@@ -15,6 +15,7 @@ solution "irc++"
 		language "C++"
 		flags { "ExtraWarnings", "FatalWarnings" }
 		files { "../source/**.cc" }
+		links { "boost_system" }
 		includedirs { "../include", "../source/include" }
 
 		configuration { "gmake" }
@@ -39,6 +40,8 @@ solution "irc++"
 		configuration "*Runtime-Static"
 			flags { "StaticRuntime" }
 
+		configuration "linux or macosx or bsd"
+			buildoptions "-pthread"
 
 	project "irctest"
 		kind "ConsoleApp"
@@ -46,7 +49,7 @@ solution "irc++"
 		flags { "ExtraWarnings", "FatalWarnings" }
 		files { "../include/irc++/test.cpp" }
 		includedirs { "../include" }
-		links { "irc++", "boost_system" }
+		links { "irc++", "boost_system", "pthread" }
 
 		configuration { "gmake" }
 			buildoptions { "-std=c++0x", "-pedantic" }

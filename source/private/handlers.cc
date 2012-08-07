@@ -1,61 +1,57 @@
 #include "handlers.hh"
-#include <boost/format.hpp>
 
 namespace ircpp {
 namespace detail {
 
-void send_message(
-    instance_data   instance,
-    std::string const & message )
+void send_line( 
+    instance_data instance,
+    std::string line )
 {
-
-    instance.irc().logstream << "Sending message: " << message << std::endl;
+    instance.log() << "MESSAGE SENT: " << line << std::endl;                
+    line += "\r\n";
     boost::asio::async_write(
         instance.conn().socket,
-        boost::asio::buffer(message),
-        [instance]( boost::system::error_code const & ec, size_t written ) {
-            if( !ec ) {
-                next_read( instance );
-            }
-            else {
-                instance.irc().logstream << "Sending login data failed: " << ec.message() << std::endl;
-            }
+        boost::asio::buffer(line),
+        [instance]( 
+            boost::system::error_code const & ec,
+            std::size_t written )
+        {
+            instance_data data = instance_data(instance);
+            data.info().stats.bytes_transferred.written += written;
+            data.info().stats.messages.sent += 1;
         }
     );
-
 }
 
-void handle_message(
-    instance_data                       instance,
-    boost::system::error_code const &   ec,
-    size_t                              bytes_read )
+void parse_line( instance_data instance, std::string const & line )
 {
-    if( !ec )
-    {
-        std::istream is( instance.conn().readbuffer.get() );
-        std::string line;
-        std::getline( is, line );
-        instance.irc().logstream << "Message received: " << line << std::endl;
-        if( line.substr(0,4) == "PING" ) {
-            line.erase(5,1);
-            line[1] = 'O';
-            line += "\r\n";
-            send_message( instance, line );
+    instance.log() << "MESSAGE RECEIVED: " << line << std::endl;                
+    std::size_t index = line.find_first_of(' ');
+    if( index != std::string::npos ) {
+        std::string command = line.substr( 0, index );
+        if( command == "PING" && line.size() >= 6) {
+            command = line;
+            command[1] = 'O';
+            command.erase(5,1);
+            send_line( instance, command );
         }
-        else {
-            next_read( instance );
-        }
-    }
-    else
-    {
-        instance.irc().logstream << "Read failed: " << ec.message() << std::endl;
     }
 }
 
-void next_read(
-    instance_data   instance )
+void handle_line_read( 
+    instance_data instance )
 {
+    std::istream is( instance.conn().readbuffer.get() );
+    std::string line;
+    if( std::getline( is, line ) )
+    {
+        parse_line( instance, line );
+    }
+}
 
+void read_next( 
+    instance_data instance )
+{
     boost::asio::async_read_until(
         instance.conn().socket,
         *instance.conn().readbuffer,
@@ -64,24 +60,45 @@ void next_read(
             boost::system::error_code const & ec,
             size_t read )
         {
-            handle_message( instance, ec, read );
-        }
+            instance_data data(instance);
+            if( !ec ) {
+                data.info().stats.bytes_transferred.read += read;
+                data.info().stats.messages.received += 1;
+                
+                handle_line_read( instance );
+                read_next( instance );            
+            }
+            else {
+                instance.log() << "read failure: " << ec.message() << std::endl;                
+            }
+        }        
     );
 }
 
-void handle_connected(
-    instance_data       instance )
+void start_reader_loop( 
+    instance_data instance )
 {
-    instance.irc().logstream << "Starting login..." << std::endl;
-    boost::format fmt("NICK %1%\r\nUSER %2% %3% * :%4%\r\n");
-    fmt % instance.conn().details.nick
-        % instance.conn().details.user
-        % instance.conn().details.host
-        % instance.conn().details.realname;    
-    instance.irc().logstream << "SENDING: " << fmt.str() << std::endl;
-    send_message(instance, fmt.str());
+    read_next( instance );
 }
 
+void perform_login( 
+    instance_data instance )
+{
+    if( !instance.info().user.pass.empty() ) {
+        send_line( instance, "PASS " + instance.info().user.pass );
+    }
+    send_line( instance, "NICK " + instance.info().user.nick );
+    send_line( instance, 
+        "USER " + instance.info().user.user + " 0 * :" + instance.info().user.real
+    );
+}
+
+void handle_connected( 
+    instance_data instance )
+{
+    start_reader_loop( instance );
+    perform_login( instance );
+}
 
 void handle_connect( 
     instance_data                       instance,
@@ -90,8 +107,8 @@ void handle_connect(
     boost::system::error_code const &   err ) 
 {
     if( !err ) {
-        instance.irc().logstream << "Connected to: " << endpoint << std::endl;
-        instance.conn().details.endpoint = endpoint;
+        instance.log() << "Connected to: " << endpoint << std::endl;
+        instance.info().connection.endpoint = endpoint;
         instance.irc().io.post(
             [instance]()
             {
@@ -100,7 +117,7 @@ void handle_connect(
         );
     }    
     else if( !next_connect( instance, endpoint_iterator ) ) {
-        instance.irc().logstream << "Error during connecting: " << err.message() << std::endl;
+        instance.log() << "Error during connecting: " << err.message() << std::endl;
     }
 }
 
@@ -108,7 +125,7 @@ bool next_connect(
     instance_data                       instance, 
     tcp::resolver::iterator             endpoint_iterator )
 {
-    instance.irc().logstream << "Resolving host for: " << instance.conn().details.server << std::endl;
+    instance.log() << "Resolving host for: " << instance.info().connection.server << std::endl;
     if( endpoint_iterator != tcp::resolver::iterator() ) { 
         tcp::endpoint ep = *endpoint_iterator;
         endpoint_iterator++;
@@ -135,11 +152,11 @@ void handle_resolve(
     boost::system::error_code const &   err )
 {    
     if( !err ) {
-        instance.irc().logstream << "Handling resolved endpoint" << std::endl;
+        instance.log() << "Handling resolved endpoint" << std::endl;
         next_connect( instance, endpoint_iterator );
     }
     else {
-        instance.irc().logstream << "An error occurred: " << err.message() << std::endl;
+        instance.log() << "An error occurred during resolving host: " << err.message() << std::endl;
     }
 }
 

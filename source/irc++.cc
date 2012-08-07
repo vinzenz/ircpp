@@ -3,6 +3,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/format.hpp>
 #include <iostream>
+#include <list>
 
 #include "private/handlers.hh"
 
@@ -38,24 +39,24 @@ void irc::connect(
     impl_->connections.push_back( std::make_shared<connection_data>(impl_->data) );
 
     // Using data
-    connection_data & data  = *impl_->connections.back();
-    data.details.server     = server;
-    data.details.port       = port;
-    data.details.nick       = nick;
-    data.details.host       = host;
-    data.details.user       = user;
-    data.details.realname   = realname;
-    
+    detail::instance_data instance( impl_->data, *impl_->connections.back() );
+    instance.info().connection.server   = server;
+    instance.info().connection.port     = port;
+    instance.info().user.nick           = nick;
+    instance.info().user.host           = host;
+    instance.info().user.user           = user;
+    instance.info().user.real           = realname;
+
     // Preforming resolve
     tcp::resolver::query query( server, port );
     impl_->data.resolver.async_resolve(
         query,
-        [&]( 
+        [instance](
             boost::system::error_code const & ec,
             tcp::resolver::iterator it) {
-                impl_->data.logstream << "Resolved host" << std::endl;
+                instance.log() << "Resolved host" << std::endl;
                 handle_resolve( 
-                    detail::instance_data( impl_->data, data ),
+                    instance,
                     it,
                     ec
                 );

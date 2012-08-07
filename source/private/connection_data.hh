@@ -13,13 +13,11 @@ struct connection_data {
     connection_data( irc_data & irc_ )
     : irc( irc_ )
     , socket( irc.io )
-    , details()
     , readbuffer( std::make_shared< boost::asio::streambuf >() )
     {}
 
     irc_data  & irc;
     tcp::socket socket;
-    server_data details;
     std::shared_ptr< boost::asio::streambuf > readbuffer;
 };
 
