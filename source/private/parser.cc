@@ -5,7 +5,16 @@ namespace ircpp {
 namespace detail {
 namespace parser {
 
+    /** @brief IRC message parsing implementation
+     */
     struct message_parser {
+        
+        /**
+         * @brief uses the class to parse a message into message_data
+         * @param line input - message string
+         * @param data output - parsed result
+         * @return returns false if parsing failed, otherwise it will return true
+         */
         static bool parse( std::string const & line, message_data & data )
         {
             message_data pdata;
@@ -31,6 +40,10 @@ namespace parser {
             parse_sender();
         }
         
+        /**
+         * @brief parses a token in between spaces
+         * @param token token parse result
+         */        
         void parse_token( std::string & token )
         {
             while( b != e && *b == ' ' ) 
@@ -49,6 +62,9 @@ namespace parser {
             b = r;
         }
         
+        /**
+         * @brief parses the sender out of the message
+         */
         void parse_sender()
         {   
             if( b != e ) 
@@ -62,24 +78,30 @@ namespace parser {
             }
         }
 
+        /**
+         * @brief parses the command out of the message
+         */
         void parse_command()
-        {
+        {            
             parse_token( d.command );
             parse_arguments();
         }
         
+        /**
+         * @brief parses the arguments out of the message
+         */
         void parse_arguments()
         {   
             success = true;
             while( b != e ) 
             {
-                if( *b == ':' )
+                if( *b == ':' ) // Trailing argument?
                 {
                     ++b;
                     d.arguments.push_back( std::string(b,e) );
                     b = e;
                 }
-                else
+                else // Non trailing argument
                 {
                     std::string arg;
                     parse_token( arg );            
@@ -87,7 +109,7 @@ namespace parser {
                     {
                         d.arguments.push_back( arg );
                     }
-                    else
+                    else // Something is fishy here
                     {
                         success = false;
                         break;
@@ -105,6 +127,12 @@ namespace parser {
     
 }
 
+/**
+ * @brief parses an IRC message
+ * @param line input - Message to be parsed
+ * @param data output - parsing result
+ * @return returns true if the message was parsed correctly
+ */
 bool parse_message( std::string const & line, message_data & data )
 {
     if( line.empty() ) {
@@ -115,34 +143,3 @@ bool parse_message( std::string const & line, message_data & data )
 }    
 
 }}
-
-#ifdef IRCPP_PARSER_TEST
-#include <iostream>
-
-void test(char const * msg)
-{
-    std::cout << "Parsing: '" << msg << "'" << std::endl;
-    ircpp::detail::message_data data;
-    if( ircpp::detail::parse_message( msg, data ) ) {
-        std::cout << "Parsing succeeded" << std::endl;
-        std::cout << "Source:  " << data.sender << std::endl;
-        std::cout << "Command: " << data.command << std::endl;
-        std::cout << "Arguments: " << std::endl;
-        for( std::string const & s : data.arguments )
-        {
-                std::cout << "\t-> " << s << std::endl;
-        }
-    }
-    else {
-        std::cout << "FAILURE: " << msg << std::endl;
-    }
-}
-
-int main(int argc, char const ** argv)
-{
-    test(":irc.eagle.y.se 251 evilbitch :There are 10 users and 1937 invisible on 5 servers");
-    test("PING :foobar");
-}
-
-
-#endif

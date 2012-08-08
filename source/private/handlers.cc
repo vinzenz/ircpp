@@ -1,9 +1,16 @@
 #include "handlers.hh"
 #include "parser.hh"
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string/classification.hpp>
 
 namespace ircpp {
 namespace detail {
 
+/**
+ * @brief sends a 'line/message' to the server
+ * @param instance shared instance data
+ * @param line the line/message to be sent
+ */
 void send_line( 
     instance_data instance,
     std::string line )
@@ -24,6 +31,11 @@ void send_line(
     );
 }
 
+/**
+ * @brief Parses a message and relays it to the message dispatcher
+ * @param instance shared instance data
+ * @param line message to be parsed
+ */
 void parse_line( instance_data instance, std::string const & line )
 {
     instance.log() << "MESSAGE RECEIVED: " << line << std::endl;
@@ -46,6 +58,10 @@ void parse_line( instance_data instance, std::string const & line )
     }
 }
 
+/**
+ * @brief Retrieves last read line from the readbuffer and passes it over to parse_line, it will trim trailing '\r' and '\n' characters.
+ * @param instance
+ */
 void handle_line_read( 
     instance_data instance )
 {
@@ -53,10 +69,15 @@ void handle_line_read(
     std::string line;
     if( std::getline( is, line ) )
     {
+        boost::algorithm::trim_right_if( line, boost::algorithm::is_any_of("\r\n") );
         parse_line( instance, line );
     }
 }
 
+/**
+ * @brief Reads one message from the socket and passes it over to the handle_line_read. In case of a failure it will stop reading from the socket, otherwise it will schedule the next read
+ * @param instance
+ */
 void read_next( 
     instance_data instance )
 {
@@ -85,12 +106,20 @@ void read_next(
     );
 }
 
+/**
+ * @brief Kicks of the message handling loop
+ * @param instance shared instance data
+ */
 void start_reader_loop( 
     instance_data instance )
 {
     read_next( instance );
 }
 
+/**
+ * @brief Implementation of login handling
+ * @param instance shared instance data
+ */
 void perform_login( 
     instance_data instance )
 {
@@ -104,6 +133,10 @@ void perform_login(
     );
 }
 
+/**
+ * @brief handles successful connection attempts. It starts the message handling loop and kicks off the login
+ * @param instance shared instance data
+ */
 void handle_connected( 
     instance_data instance )
 {
@@ -111,6 +144,14 @@ void handle_connected(
     perform_login( instance );
 }
 
+
+/**
+ * @brief handles the established or failed connect event, in case of failure it tries to attempt to connect to the next resolved endpoint
+ * @param instance shared instance data
+ * @param endpoint_iterator endpoint iterator
+ * @param endpoint last tried endpoint
+ * @param err result of connect attempt
+ */
 void handle_connect( 
     instance_data                       instance,
     tcp::resolver::iterator             endpoint_iterator,
@@ -134,20 +175,33 @@ void handle_connect(
     }
 }
 
+/**
+ * @brief schedules an asynchronous connect to the resolved host, if applicable
+ * @param instance shared instance data
+ * @param endpoint_iterator endpoint iterator
+ * @return returns true if a connect attempt has been scheduled. It returns false if no endpoints have been resolved or none has been resolved at all 
+ */
 bool next_connect(
     instance_data                       instance, 
     tcp::resolver::iterator             endpoint_iterator )
 {
-    instance.log() << "Resolving host for: " << instance.info().connection.server << std::endl;
     if( endpoint_iterator != tcp::resolver::iterator() )
     {
+        // Retrieving endpoint
         tcp::endpoint ep = *endpoint_iterator;
+        
+        instance.log() << "Endpoint resolved. Attempting to connect to: " << ep << std::endl;
+
+        // Stepping iterator for next connection
         endpoint_iterator++;
+        
+        // Schedule connect
         instance.conn().socket.async_connect(
             ep,
             [instance, ep, endpoint_iterator]( // Capture all values by copy
                 boost::system::error_code const & ec )
             {
+                // Handle connect attempt result
                 handle_connect(
                     instance,
                     endpoint_iterator,
@@ -156,20 +210,31 @@ bool next_connect(
                 );
             }
         );
+        // Scheduled connect
         return true;
     }
+    // Failed to schedule connect -> No more endpoints available
     return false;
 }
 
+/**
+ * @brief handle_resolve handles the result of resolving the server host
+ * @param instance shared instance data
+ * @param endpoint_iterator endpoint iterator
+ * @param err result of resolving host
+ */
 void handle_resolve( 
     instance_data                       instance, 
     tcp::resolver::iterator             endpoint_iterator,
     boost::system::error_code const &   err )
 {    
-    if( !err )
+    if( !err && endpoint_iterator != tcp::resolver::iterator() )
     {
-        instance.log() << "Handling resolved endpoint" << std::endl;
         next_connect( instance, endpoint_iterator );
+    }
+    else if( endpoint_iterator == tcp::resolver::iterator() )
+    {
+        instance.log() << "Host " <<  instance.info().connection.server << " couldn't be resolved" << std::endl;
     }
     else
     {
