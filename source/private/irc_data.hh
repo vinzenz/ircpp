@@ -10,15 +10,13 @@ namespace detail {
 using boost::asio::ip::tcp;
 
 struct irc_data {
-    irc_data( std::ostream & oslog )
+    irc_data()
     : io()
     , resolver( io )
-    , logstream( oslog )
     {}
 
     boost::asio::io_service     io;
     tcp::resolver               resolver;
-    std::ostream              & logstream;
 };
 
 }}

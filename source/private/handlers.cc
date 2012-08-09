@@ -2,6 +2,8 @@
 #include "parser.hh"
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <cassert>
+#include <sstream>
 
 namespace ircpp {
 namespace detail {
@@ -15,7 +17,7 @@ void send_line(
     instance_data instance,
     std::string line )
 {
-    instance.log() << "MESSAGE SENT: " << line << std::endl;                
+    instance.log_info( "send_line", "MESSAGE SENT: " + line );
     line += "\r\n";
     boost::asio::async_write(
         instance.conn().socket,
@@ -38,7 +40,7 @@ void send_line(
  */
 void parse_line( instance_data instance, std::string const & line )
 {
-    instance.log() << "MESSAGE RECEIVED: " << line << std::endl;
+    instance.log_debug( "parse_line", "MESSAGE RECEIVED: " + line );
     message_data data;
     if( parse_message( line, data ) )
     {
@@ -54,7 +56,7 @@ void parse_line( instance_data instance, std::string const & line )
     }
     else 
     {
-        instance.log() << "PARSER ERROR ON MESSAGE: " << line << std::endl;
+        instance.log_error( "parse_line", "PARSER ERROR ON MESSAGE: " + line );
     }
 }
 
@@ -100,7 +102,7 @@ void read_next(
             }
             else
             {
-                instance.log() << "read failure: " << ec.message() << std::endl;                
+                instance.log_error( "next_read", "read failure: " + ec.message() );
             }
         }        
     );
@@ -160,7 +162,9 @@ void handle_connect(
 {
     if( !err )
     {
-        instance.log() << "Connected to: " << endpoint << std::endl;
+        std::ostringstream eps;
+        eps << endpoint;
+        instance.log_info( "handle_connect", "Connected to: " + eps.str() );
         instance.info().connection.endpoint = endpoint;
         instance.irc().io.post(
             [instance]()
@@ -171,7 +175,7 @@ void handle_connect(
     }    
     else if( !next_connect( instance, endpoint_iterator ) )
     {
-        instance.log() << "Error during connecting: " << err.message() << std::endl;
+        instance.log_error( "handle_connect", "Error during connecting: " + err.message() );
     }
 }
 
@@ -190,7 +194,9 @@ bool next_connect(
         // Retrieving endpoint
         tcp::endpoint ep = *endpoint_iterator;
         
-        instance.log() << "Endpoint resolved. Attempting to connect to: " << ep << std::endl;
+        std::ostringstream eps;
+        eps << ep;
+        instance.log_info( "next_connect", "Endpoint resolved. Attempting to connect to: " + eps.str() );
 
         // Stepping iterator for next connection
         endpoint_iterator++;
@@ -228,17 +234,26 @@ void handle_resolve(
     tcp::resolver::iterator             endpoint_iterator,
     boost::system::error_code const &   err )
 {    
+    // Successful and iterator not at the end
     if( !err && endpoint_iterator != tcp::resolver::iterator() )
     {
+        // Perform connect
         next_connect( instance, endpoint_iterator );
     }
+    // An error occurred during resolving the hostname
+    else if ( err )
+    {
+        instance.log_error( "handle_resolve", "An error occurred during resolving host: " + err.message() );
+    }
+    // iterator at the end
     else if( endpoint_iterator == tcp::resolver::iterator() )
     {
-        instance.log() << "Host " <<  instance.info().connection.server << " couldn't be resolved" << std::endl;
+        instance.log_error( "handle_resolve", "Host " +  instance.info().connection.server + " couldn't be resolved" );
     }
     else
     {
-        instance.log() << "An error occurred during resolving host: " << err.message() << std::endl;
+        // WTF?
+        assert(false && "If this happens something is pretty fishy.");
     }
 }
 
