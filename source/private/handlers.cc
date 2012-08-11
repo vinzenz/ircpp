@@ -13,7 +13,7 @@ namespace detail {
  * @param instance shared instance data
  * @param line the line/message to be sent
  */
-void send_line( 
+void send_line(
     instance_data instance,
     std::string line )
 {
@@ -22,13 +22,18 @@ void send_line(
     boost::asio::async_write(
         instance.conn().socket,
         boost::asio::buffer(line),
-        [instance]( 
+        [instance](
             boost::system::error_code const & ec,
             std::size_t written )
         {
-            instance_data data = instance_data(instance);
-            data.info().stats.bytes_transferred.written += written;
-            data.info().stats.messages.sent += 1;
+            if( !ec ) {
+                instance_data data = instance_data(instance);
+                data.info().stats.bytes_transferred.written += written;
+                data.info().stats.messages.sent += 1;
+            }
+            else {
+                instance.log_error( "send_line completion handler", "Sending line failed: " + ec.message() );
+            }
         }
     );
 }
@@ -49,7 +54,7 @@ void parse_line( instance_data instance, std::string const & line )
             std::string reply = "PONG";
             if( !data.arguments.empty() )
             {
-                for( size_t i = 0; i < data.arguments.size() - 1; ++i ) { 
+                for( size_t i = 0; i < data.arguments.size() - 1; ++i ) {
                     reply += " " + data.arguments[i];
                 }
                 reply += " :" + data.arguments.back();
@@ -57,7 +62,7 @@ void parse_line( instance_data instance, std::string const & line )
             send_line( instance, reply );
         }
     }
-    else 
+    else
     {
         instance.log_error( "parse_line", "PARSER ERROR ON MESSAGE: " + line );
     }
@@ -67,7 +72,7 @@ void parse_line( instance_data instance, std::string const & line )
  * @brief Retrieves last read line from the readbuffer and passes it over to parse_line, it will trim trailing '\r' and '\n' characters.
  * @param instance
  */
-void handle_line_read( 
+void handle_line_read(
     instance_data instance )
 {
     std::istream is( instance.conn().readbuffer.get() );
@@ -83,7 +88,7 @@ void handle_line_read(
  * @brief Reads one message from the socket and passes it over to the handle_line_read. In case of a failure it will stop reading from the socket, otherwise it will schedule the next read
  * @param instance
  */
-void read_next( 
+void read_next(
     instance_data instance )
 {
     boost::asio::async_read_until(
@@ -99,15 +104,15 @@ void read_next(
             {
                 data.info().stats.bytes_transferred.read += read;
                 data.info().stats.messages.received += 1;
-                
+
                 handle_line_read( instance );
-                read_next( instance );            
+                read_next( instance );
             }
             else
             {
                 instance.log_error( "next_read", "read failure: " + ec.message() );
             }
-        }        
+        }
     );
 }
 
@@ -115,7 +120,7 @@ void read_next(
  * @brief Kicks of the message handling loop
  * @param instance shared instance data
  */
-void start_reader_loop( 
+void start_reader_loop(
     instance_data instance )
 {
     read_next( instance );
@@ -125,7 +130,7 @@ void start_reader_loop(
  * @brief Implementation of login handling
  * @param instance shared instance data
  */
-void perform_login( 
+void perform_login(
     instance_data instance )
 {
     if( !instance.info().user.pass.empty() )
@@ -133,7 +138,7 @@ void perform_login(
         send_line( instance, "PASS " + instance.info().user.pass );
     }
     send_line( instance, "NICK " + instance.info().user.nick );
-    send_line( instance, 
+    send_line( instance,
         "USER " + instance.info().user.user + " 0 * :" + instance.info().user.real
     );
 }
@@ -142,7 +147,7 @@ void perform_login(
  * @brief handles successful connection attempts. It starts the message handling loop and kicks off the login
  * @param instance shared instance data
  */
-void handle_connected( 
+void handle_connected(
     instance_data instance )
 {
     start_reader_loop( instance );
@@ -157,11 +162,11 @@ void handle_connected(
  * @param endpoint last tried endpoint
  * @param err result of connect attempt
  */
-void handle_connect( 
+void handle_connect(
     instance_data                       instance,
     tcp::resolver::iterator             endpoint_iterator,
     tcp::endpoint                       endpoint,
-    boost::system::error_code const &   err ) 
+    boost::system::error_code const &   err )
 {
     if( !err )
     {
@@ -175,7 +180,7 @@ void handle_connect(
                 handle_connected( instance );
             }
         );
-    }    
+    }
     else if( !next_connect( instance, endpoint_iterator ) )
     {
         instance.log_error( "handle_connect", "Error during connecting: " + err.message() );
@@ -186,24 +191,24 @@ void handle_connect(
  * @brief schedules an asynchronous connect to the resolved host, if applicable
  * @param instance shared instance data
  * @param endpoint_iterator endpoint iterator
- * @return returns true if a connect attempt has been scheduled. It returns false if no endpoints have been resolved or none has been resolved at all 
+ * @return returns true if a connect attempt has been scheduled. It returns false if no endpoints have been resolved or none has been resolved at all
  */
 bool next_connect(
-    instance_data                       instance, 
+    instance_data                       instance,
     tcp::resolver::iterator             endpoint_iterator )
 {
     if( endpoint_iterator != tcp::resolver::iterator() )
     {
         // Retrieving endpoint
         tcp::endpoint ep = *endpoint_iterator;
-        
+
         std::ostringstream eps;
         eps << ep;
         instance.log_info( "next_connect", "Endpoint resolved. Attempting to connect to: " + eps.str() );
 
         // Stepping iterator for next connection
         endpoint_iterator++;
-        
+
         // Schedule connect
         instance.conn().socket.async_connect(
             ep,
@@ -232,11 +237,11 @@ bool next_connect(
  * @param endpoint_iterator endpoint iterator
  * @param err result of resolving host
  */
-void handle_resolve( 
-    instance_data                       instance, 
+void handle_resolve(
+    instance_data                       instance,
     tcp::resolver::iterator             endpoint_iterator,
     boost::system::error_code const &   err )
-{    
+{
     // Successful and iterator not at the end
     if( !err && endpoint_iterator != tcp::resolver::iterator() )
     {

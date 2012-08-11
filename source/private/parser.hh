@@ -8,6 +8,12 @@ namespace ircpp {
 namespace detail {
 
 struct message_data {
+    message_data()
+    : sender()
+    , command()
+    , arguments()
+    {}
+
     std::string sender;
     std::string command;
     std::vector<std::string> arguments;

@@ -5,6 +5,14 @@ namespace ircpp {
 namespace detail {
 
 struct channel_info {
+    channel_info()
+    : name()
+    , active(false)
+    , topic()
+    , modes()
+    , names()
+    {}
+
     std::string name;
     bool active;
     std::string topic;
@@ -13,6 +21,10 @@ struct channel_info {
 };
 
 struct channels_info {
+    channels_info()
+    : history()
+    {}
+
     std::vector<channel_info> history;
 };
 

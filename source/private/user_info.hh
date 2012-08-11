@@ -7,11 +7,20 @@ namespace ircpp {
 namespace detail {
 
 struct user_info {
+    user_info()
+    : nick()
+    , user()
+    , host()
+    , real()
+    , pass()
+    {
+    }
+
     std::string nick;
     std::string user;
     std::string host;
     std::string real;
-    std::string pass;    
+    std::string pass;
 };
 
 }}

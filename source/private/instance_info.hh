@@ -11,6 +11,15 @@ namespace ircpp {
 namespace detail {
 
 struct instance_info {
+    instance_info()
+    : connection()
+    , user()
+    , stats()
+    , user_mods()
+    , channels()
+    {
+    }
+
     connection_info connection;
     user_info       user;
     statistics      stats;

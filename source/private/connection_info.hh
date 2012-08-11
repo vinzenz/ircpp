@@ -8,6 +8,13 @@ namespace ircpp {
 namespace detail {
 
 struct connection_info {
+    connection_info()
+    : endpoint()
+    , server()
+    , port()
+    {
+    }
+
     boost::asio::ip::tcp::endpoint endpoint;
     std::string server;
     std::string port;
