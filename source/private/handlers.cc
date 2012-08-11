@@ -49,7 +49,10 @@ void parse_line( instance_data instance, std::string const & line )
             std::string reply = "PONG";
             if( !data.arguments.empty() )
             {
-                reply += " " + data.arguments.back();
+                for( size_t i = 0; i < data.arguments.size() - 1; ++i ) { 
+                    reply += " " + data.arguments[i];
+                }
+                reply += " :" + data.arguments.back();
             }
             send_line( instance, reply );
         }
