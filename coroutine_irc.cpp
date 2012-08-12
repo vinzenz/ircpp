@@ -106,9 +106,10 @@ struct irc : coroutine
                     if( std::getline( is, line ) ) {
                         while( !line.empty() && line[line.size() - 1] == '\r' ) line.erase( line.size() - 1 );
                         std::cout << "Received: " << line << std::endl;
-                        if( line.substr(4) == "PING" ) {
-                            line[2] = 'O';
-                            send_buffer_ = line;
+                        if( line.substr(0, 4) == "PING" ) {
+                            line[1] = 'O';
+                            send_buffer_ = line + "\r\n";
+                            std::cout << "Sending: " << line << std::endl;
                         }
                     }
                 }
