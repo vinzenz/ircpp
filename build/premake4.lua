@@ -18,7 +18,7 @@ solution "irc++"
 		links { "boost_system" }
 		includedirs { "../include", "../source/include" }
 
-		configuration { "gmake" }
+		configuration { "gmake or codeblocks or codelite" }
 			buildoptions { "-std=c++0x", "-pedantic" }
 
 		configuration "*Dynamic*"
@@ -51,7 +51,7 @@ solution "irc++"
 		includedirs { "../include" }
 		links { "irc++", "boost_system", "pthread" }
 
-		configuration { "gmake" }
+		configuration { "gmake or codeblocks or codelite" }
 			buildoptions { "-std=c++0x", "-pedantic" }
 
 		configuration "linux or macosx or bsd"

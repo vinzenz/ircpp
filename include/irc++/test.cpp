@@ -1,4 +1,5 @@
 #include <irc++/irc++.hh>
+#include <irc++/handler.hh>
 
 
 class my_handler : public ircpp::handler_t {
@@ -25,7 +26,7 @@ ircpp::irc instance;
 
 instance.connect("irc.freenode.net", "6667", "evilbitch", "evilbitch", "foo", "evilbitch", std::make_shared<my_handler>("Freenode") );
 instance.connect("irc.euirc.net", "6667", "evilbitch", "evilbitch", "foo", "evilbitch", std::make_shared<my_handler>("euIRC"));
-//instance.connect("irc.du.se", "6667", "evilbitch", "evilbitch", "foo", "evilbitch", std::make_shared<my_handler>("du.se"));
+instance.connect("irc.oftc.net", "6667", "evilbitch", "evilbitch", "foo", "evilbitch", std::make_shared<my_handler>("OFTC"));
 instance.connect("irc.gnome.org", "6667", "evilbitch", "evilbitch", "foo", "evilbitch", std::make_shared<my_handler>("GimpNET"));
 
 instance.run();
