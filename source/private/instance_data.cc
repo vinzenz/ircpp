@@ -1,4 +1,5 @@
 #include "instance_data.hh"
+#include "connection_impl.hh"
 #include <irc++/irc++.hh>
 
 namespace ircpp {
@@ -11,7 +12,10 @@ instance_data::instance_data(
 , m_conn( conn_ )
 , m_info( std::make_shared<instance_info>() )
 , m_handler( handler_ )
-{}
+, m_send_conn()
+{
+    m_send_conn = std::make_shared<connection_impl>(*this);
+}
 
 irc_data & instance_data::irc()
 {
@@ -31,6 +35,11 @@ connection_data & instance_data::conn()
 connection_data const & instance_data::conn() const
 {
     return m_conn.get();
+}
+
+ircpp::connection & instance_data::connection() const
+{
+    return const_cast<ircpp::connection &>(*m_send_conn);
 }
 #if 0    
 std::ostream & instance_data::log() const {

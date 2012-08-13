@@ -1,5 +1,6 @@
 #include "handlers.hh"
 #include "parser.hh"
+#include "command_handler.hh"
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <cassert>
@@ -7,36 +8,6 @@
 
 namespace ircpp {
 namespace detail {
-
-/**
- * @brief sends a 'line/message' to the server
- * @param instance shared instance data
- * @param line the line/message to be sent
- */
-void send_line(
-    instance_data instance,
-    std::string line )
-{
-    instance.log_info( "send_line", "MESSAGE SENT: " + line );
-    line += "\r\n";
-    boost::asio::async_write(
-        instance.conn().socket,
-        boost::asio::buffer(line),
-        [instance](
-            boost::system::error_code const & ec,
-            std::size_t written )
-        {
-            if( !ec ) {
-                instance_data data = instance_data(instance);
-                data.info().stats.bytes_transferred.written += written;
-                data.info().stats.messages.sent += 1;
-            }
-            else {
-                instance.log_error( "send_line completion handler", "Sending line failed: " + ec.message() );
-            }
-        }
-    );
-}
 
 /**
  * @brief Parses a message and relays it to the message dispatcher
@@ -49,18 +20,7 @@ void parse_line( instance_data instance, std::string const & line )
     message_data data;
     if( parse_message( line, data ) )
     {
-        if( data.command == "PING" )
-        {
-            std::string reply = "PONG";
-            if( !data.arguments.empty() )
-            {
-                for( size_t i = 0; i < data.arguments.size() - 1; ++i ) {
-                    reply += " " + data.arguments[i];
-                }
-                reply += " :" + data.arguments.back();
-            }
-            send_line( instance, reply );
-        }
+        command_handler( instance, data );
     }
     else
     {
@@ -135,12 +95,10 @@ void perform_login(
 {
     if( !instance.info().user.pass.empty() )
     {
-        send_line( instance, "PASS " + instance.info().user.pass );
+        instance.connection().send("", "PASS", { instance.info().user.pass } );
     }
-    send_line( instance, "NICK " + instance.info().user.nick );
-    send_line( instance,
-        "USER " + instance.info().user.user + " 0 * :" + instance.info().user.real
-    );
+    instance.connection().send("", "NICK", { instance.info().user.nick } );
+    instance.connection().send("", "USER", { instance.info().user.user, "0", "*", instance.info().user.real } );
 }
 
 /**

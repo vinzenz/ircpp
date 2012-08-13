@@ -3,6 +3,7 @@
 
 #include "connection_data.hh"
 #include "instance_info.hh"
+#include <irc++/connection.hh>
 
 namespace ircpp {
 
@@ -21,6 +22,8 @@ struct instance_data {
     
     connection_data & conn();
     connection_data const & conn() const;
+    
+    ircpp::connection & connection() const;
 #if 0    
     std::ostream & log() const;
 #endif    
@@ -39,6 +42,7 @@ protected:
     std::reference_wrapper<connection_data> m_conn;
     std::shared_ptr<instance_info> m_info;
     std::shared_ptr<handler_base_t> m_handler;
+    std::shared_ptr<ircpp::connection> m_send_conn;
 };
 
 }}
