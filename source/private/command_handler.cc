@@ -1,3 +1,7 @@
+//  (C) 2012 Vinzenz Feenstra
+//  Distributed under the Boost Software License, Version 1.0. 
+//  (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
+
 #include "command_handler.hh"
 #include "commands.hh"
 #include <irc++/handler_base.hh>
