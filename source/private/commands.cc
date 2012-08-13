@@ -2,14 +2,16 @@
 //  Distributed under the Boost Software License, Version 1.0. 
 //  (See accompanying file LICENSE or copy at http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef GUARD_IRCPP_PRIVATE_USER_MOD_INFO_HH_INCLUDED
-#define GUARD_IRCPP_PRIVATE_USER_MOD_INFO_HH_INCLUDED
+#include "commands.hh"
 
 namespace ircpp {
 namespace detail {
+namespace command {
 
-struct user_mod_info {};
+void pong( instance_data instance, message_data const & message )
+{
+    instance.connection().send( std::string(), "PONG", message.arguments );
+}
 
-}}
 
-#endif //GUARD_IRCPP_PRIVATE_USER_MOD_INFO_HH_INCLUDED
+}}}
