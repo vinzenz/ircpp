@@ -1,31 +1,43 @@
 
-#configuration#
+Configuration
+=============
 
-##channel config##
+channel config
+--------------
+
 * name
 * passwd
 
-##server config##
+server config
+-------------
+
 * name/alias
 * address
 * port
 * user
 * nick
   
-#status data#
+status data
+===========
 
-##channel##
+channel
+-------
+
 * names
 * topic
 * modes
 * passwd
 
-##user detail##
+user detail
+-----------
+
 * name
 * user
 * host
 
-##user mode##
+user mode
+---------
+
 * none
 * voice
 * halfop
@@ -33,8 +45,8 @@
 * admin
 * founder
 
-##user state##
+user state
+----------
 
-
-##channel user##
-
+channel user
+------------
